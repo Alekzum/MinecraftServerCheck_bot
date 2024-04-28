@@ -40,7 +40,3 @@ def make_row_things(texts: list[str], acts: list[dict[Literal['url', 'callback',
         result.append(button)
     keyboard = InlineKeyboardMarkup(inline_keyboard=[result])
     return keyboard
-if __name__ == "__main__":
-    print(make_button("hello", "1"))
-    print(make_row(("1", "2"), ("1", "2")))
-    print(make_keyboard((("1", "2"), ("3", "4")), (("1", "2"), ("3", "4"))))

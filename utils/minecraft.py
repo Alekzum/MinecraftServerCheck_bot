@@ -80,12 +80,3 @@ def get_info(host: str, port=25565, to_dict=False) -> RESULT_DICT:
         # print(repr(ex))
         # result = dict(status=False, string_status=TURNED_OFF) if to_dict else TURNED_OFF
     return result
-
-if __name__ == "__main__":
-    s = get_info("109.120.133.168")
-    # d = get_info("109.120.133.168", to_dict=True)
-    # print(repr(d))
-    # print()
-    print(repr(s))
-    # print()
-    # print(repr(dict_to_str(d)))
