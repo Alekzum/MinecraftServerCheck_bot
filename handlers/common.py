@@ -23,12 +23,11 @@ SETTINGS_ROW = make_row(["Setup host", "Setup port", "Go to the menu"], ["setup 
 async def cmd_start(message: Message, state: FSMContext):
     await message.bot.set_my_commands([
         BotCommand(command="start", description="Start message"),
-        BotCommand(command="cancel", description="Stop write info (like host or port)"),
         BotCommand(command="menu", description="Just menu"),
-        BotCommand(command="server", description="Check info about server"),
         BotCommand(command="settings", description="Go to the settings"),
-        BotCommand(command="setup port", description="Change server's port"),
-        BotCommand(command="setup host", description="Change server's host"),
+        BotCommand(command="server", description="Check info about server"),
+        BotCommand(command="setup", description="Change server's host and port"),
+        BotCommand(command="cancel", description="Stop write info (like host or port)"),
     ])
     data = await state.get_data()
     if data is None:
@@ -152,6 +151,24 @@ async def callback_menu(callback: CallbackQuery, state: FSMContext, commands: li
 @rt.message(Command("setup"))
 async def cmd_menu(message: Message, state: FSMContext):
     match message.text.split():
+        case [_, "host", host]:
+            await state.update_data({"host": message.text})
+            await message.answer(f"Host is setted to {message.text}", reply_markup=MENU_BUTTON)
+            await state.set_state()
+
+        case [_, "port", port]:
+            if port.isdecimal():
+                port = int(port)
+                await state.update_data({"port": port})
+                await message.answer(f"Port is setted to {port}", reply_markup=MENU_BUTTON)
+            
+            elif port == ".":
+                await state.update_data({"port": 25565})
+                await message.answer(f"Port is setted to 25565", reply_markup=MENU_BUTTON)
+            
+            else:
+                await message.answer("Input a correct port or just \".\"")
+        
         case [_, "host"]:
             await state.set_state(Setup.host)
             await message.answer("Write host…")
@@ -160,6 +177,8 @@ async def cmd_menu(message: Message, state: FSMContext):
             await state.set_state(Setup.port)
             await message.answer("Write port… Or input \".\" for default value (25565)")
 
+        case [_]:
+            await message.answer("/setup port [port] or /setup host [host]", reply_markup=MENU_BUTTON)
         case _:
             await message.answer("what?", reply_markup=MENU_BUTTON)
 
