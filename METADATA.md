@@ -10,9 +10,4 @@ This bot can view stats from minecraft server (thx mctools)
 
 - Write bot's token
 
-# Usage
-- Go to your bot
-
-- Use comand `/start`
-
-- Click button `Menu`
+- Bot is started!
