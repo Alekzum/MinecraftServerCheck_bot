@@ -7,6 +7,7 @@ import logging
 LOGGER = logging.getLogger(__name__)
 TURNED_OFF = "🔴 Server is offline"
 TURNED_ON = "🟢 Server is online"
+REFUSED = TURNED_OFF + "\nConnection is refused…"
 RESULT_DICT = dict[Literal['status', 'string_status', 'description', 'version', 'maxp', 'onp', 'response_time', 'players'], Union[bool, str, int]]  # Players are optional
 
 
@@ -77,8 +78,12 @@ def get_info(host: str, port=25565, to_dict=False) -> RESULT_DICT:
     """Return string for some server in dict"""
 
     client = PINGClient(host, port, format_method=PINGClient.REMOVE)
-    stats = client.get_stats()
-    result = _format_message_dict(stats) if to_dict else _format_message(stats)
+    try:
+        stats = client.get_stats()
+    except ConnectionRefusedError:
+        result = {"status": False, "string_status": REFUSED} if to_dict else REFUSED
+    else:
+        result = _format_message_dict(stats) if to_dict else _format_message(stats)
     # try:
         # stats = clean_stats(client.get_stats())
         # print(stats)
