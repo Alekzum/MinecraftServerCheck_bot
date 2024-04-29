@@ -1,19 +1,27 @@
 from typing import Literal, Union, Optional
 from mctools import PINGClient
+import traceback
+import logging
 
 
+LOGGER = logging.getLogger(__name__)
 TURNED_OFF = "🔴 Server is offline"
 TURNED_ON = "🟢 Server is online"
 RESULT_DICT = dict[Literal['status', 'string_status', 'description', 'version', 'maxp', 'onp', 'response_time', 'players'], Union[bool, str, int]]  # Players are optional
 
 
 def parse_stats(stats) -> dict:
-    maxp = stats['players']['max']
-    onp = stats['players']['online']
-    version = stats['version']['name']
-    description = stats['description']
-    players_list: list[str, str] = list(sorted(map(lambda p: p[0], stats['players']['sample'])))
-    response_time = stats['time']
+    try:
+        maxp = stats['players']['max']
+        onp = stats['players']['online']
+        version = stats['version']['name']
+        description = stats['description']
+        players_list: list[str, str] = list(sorted(map(lambda p: p[0], stats['players'].get('sample') or [])))
+        response_time = stats['time']
+    except KeyError:
+        error = traceback.format_exc()
+        LOGGER.warning(error + "\n" + f"Dict is {stats}!")
+        exit(f"Dict is {stats}!")
     return maxp, onp, version, description, players_list, response_time
 
 
