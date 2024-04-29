@@ -8,6 +8,7 @@ LOGGER = logging.getLogger(__name__)
 TURNED_OFF = "🔴 Server is offline"
 TURNED_ON = "🟢 Server is online"
 REFUSED = TURNED_OFF + "\nConnection is refused…"
+TIMEOUT = TURNED_OFF + "\nConnection is timedout…"
 RESULT_DICT = dict[Literal['status', 'string_status', 'description', 'version', 'maxp', 'onp', 'response_time', 'players'], Union[bool, str, int]]  # Players are optional
 
 
@@ -43,10 +44,13 @@ def _format_message_dict(stats) -> RESULT_DICT:
         # Fix for aternos
     if maxp == 0:
         result = dict(status=False, string_status=TURNED_OFF, description=description, version=version, onp=onp, maxp=maxp, response_time=response_time)
-    else:
-        pp = players_list
     
+    elif players_list is not None:
+        pp = players_list
         result = dict(status=True, string_status=TURNED_ON, description=description, version=version, players=pp, maxp=maxp, onp=onp, response_time=response_time)
+    
+    else:
+        result = dict(status=False, string_status=TURNED_OFF, description=description, version=version, maxp=maxp, onp=onp, response_time=response_time)
     return result
 
 
@@ -58,7 +62,7 @@ def dict_to_str(d: RESULT_DICT) -> str:
     version = d.get('version')
     description = d.get('description')
     players_list: str = d.get('players')
-    response_time = d.get('response_time')
+    response_time = d.get('response_time') or 0.0
     
     # Fix for aternos
     if maxp == 0:
@@ -82,6 +86,8 @@ def get_info(host: str, port=25565, to_dict=False) -> RESULT_DICT:
         stats = client.get_stats()
     except ConnectionRefusedError:
         result = {"status": False, "string_status": REFUSED} if to_dict else REFUSED
+    except TimeoutError:
+        result = {"status": False, "string_status": TIMEOUT} if to_dict else TIMEOUT
     else:
         result = _format_message_dict(stats) if to_dict else _format_message(stats)
     # try:
