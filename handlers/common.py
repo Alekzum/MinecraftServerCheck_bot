@@ -240,7 +240,9 @@ async def set_port(message: Message, state: FSMContext):
         await message.answer("Input a correct port or just \".\"")
 
 
-def _get_info(inline, port, host):
+def _get_info(*, inline=None, host="", port=25565):
+    if inline is None or host == "":
+        return
     info = get_info(host, port, to_dict=True)
     string_info = dict_to_str(info)
     uid = str(uuid4())
@@ -284,13 +286,13 @@ async def inline_info(inline: InlineQuery, state: FSMContext):
     data = await state.get_data() or {}
     if len(inline.query) == 0 and "host" in data and "port" in data:
         host, port = data['host'], data['port']
-        article = _get_info(inline, port, host)
+        article = _get_info(inline=inline, port=port, host=host)
     elif len(inline.query) != 0 and inline.query.count(":") == 1 and inline.query.split(":")[1].isdecimal():
         host, port = inline.query.split(":")
-        article = _get_info(inline, port, host)
-    elif len(inline.query) != 0:
+        article = _get_info(inline=inline, port=port, host=host)
+    elif len(inline.query) != 0 and inline.query.count(":") == 0:
         host = inline.query
-        article = _get_info(inline, port)
+        article = _get_info(inline=inline, host=host)
     else:
         button = InlineQueryResultsButton(text="Set these parameters", start_parameter="settings")
         article = [
