@@ -257,8 +257,8 @@ def _get_info(inline, port, host):
     else:
         article_safe = InlineQueryResultArticle(
             id=str(uuid4()),     # status=False, string_status=TURNED_OFF, description=description, version=version, onp=onp, maxp=maxp
-            title=info.get('string_status'),
-            description=string_info,
+            title=info.get('string_status').splitlines()[0],
+            description="\n".join(info.get('string_status').splitlines()[1:]),
             input_message_content=InputTextMessageContent(
                 message_text=info.get('string_status')
             ),
