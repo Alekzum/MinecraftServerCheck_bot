@@ -5,7 +5,7 @@ from utils.minecraft import get_info, dict_to_str
 from utils.states import Setup
 from aiogram import Router, F
 from aiogram.filters import Command, StateFilter
-from aiogram.types import Message, CallbackQuery, InlineQuery, InlineQueryResultArticle, InputTextMessageContent, BotCommand
+from aiogram.types import Message, CallbackQuery, InlineQuery, InlineQueryResultArticle, InputTextMessageContent, BotCommand, InlineQueryResultsButton
 from aiogram.fsm.context import FSMContext
 from uuid import uuid4
 import logging
@@ -21,6 +21,22 @@ SETTINGS_ROW = make_row(["Setup host", "Setup port", "Go to the menu"], ["setup 
 
 @rt.message(Command("start"))
 async def cmd_start(message: Message, state: FSMContext):
+    data = await state.get_data()
+    if data is None:
+        await state.set_data({})
+    
+    args = message.text.split(" ")
+    match args:
+        case ['/start', 'settings']:
+            msg = message.model_copy(update={'text': '/settings'})
+            await cmd_settings(msg, state)
+            return
+        case ['/start']:
+            pass
+        case _:
+            logger.warn(f"Args for start are {args}")
+            return
+    
     await message.bot.set_my_commands([
         BotCommand(command="start", description="Start message"),
         BotCommand(command="menu", description="Just menu"),
@@ -29,9 +45,7 @@ async def cmd_start(message: Message, state: FSMContext):
         BotCommand(command="setup", description="Change server's host and port"),
         BotCommand(command="cancel", description="Stop write info (like host or port)"),
     ])
-    data = await state.get_data()
-    if data is None:
-        await state.set_data({})
+
     await message.answer("Hello!", reply_markup=MENU_BUTTON)
 
 
@@ -78,7 +92,7 @@ async def callback_menu(callback: CallbackQuery, state: FSMContext,):
 
 
 @rt.message(Command("server"))
-async def cmd_menu(message: Message, state: FSMContext):
+async def cmd_server(message: Message, state: FSMContext):
     data = await state.get_data() or {}
     if "host" in data and "port" in data:
         host, port = data['host'], data['port']
@@ -96,7 +110,7 @@ async def cmd_menu(message: Message, state: FSMContext):
 
 
 @rt.callback_query(CallbackCommand("server"))
-async def callback_menu(callback: CallbackQuery, state: FSMContext, commands: list[str]):
+async def callback_server(callback: CallbackQuery, state: FSMContext, commands: list[str]):
     if len(commands) == 2:
         uid = commands[1]
         if get_host_port(uid) is None:
@@ -133,14 +147,14 @@ async def callback_menu(callback: CallbackQuery, state: FSMContext, commands: li
 
 
 @rt.message(Command("settings"))
-async def cmd_menu(message: Message, state: FSMContext):
+async def cmd_settings(message: Message, state: FSMContext):
     data = await state.get_data() or {}
     string_data = "\n• Host: {}\n• Port: {}".format(data.get('host'), data.get('port'))
     await message.answer(f"Current settigns are: {string_data}", reply_markup=SETTINGS_ROW)
     
 
 @rt.callback_query(CallbackCommand("settings"))
-async def callback_menu(callback: CallbackQuery, state: FSMContext, commands: list[str]):
+async def callback_settings(callback: CallbackQuery, state: FSMContext, commands: list[str]):
     data = await state.get_data() or {}
     string_data = "\n• Host: {}\n• Port: {}".format(data.get('host'), data.get('port'))
     try: await callback.message.edit_text(f"Current settigns are: {string_data}", reply_markup=SETTINGS_ROW)
@@ -149,7 +163,7 @@ async def callback_menu(callback: CallbackQuery, state: FSMContext, commands: li
 
 
 @rt.message(Command("setup"))
-async def cmd_menu(message: Message, state: FSMContext):
+async def cmd_setup(message: Message, state: FSMContext):
     match message.text.split():
         case [_, "host", host]:
             await state.update_data({"host": message.text})
@@ -184,7 +198,7 @@ async def cmd_menu(message: Message, state: FSMContext):
 
 
 @rt.callback_query(CallbackCommand("setup"))
-async def callback_menu(callback: CallbackQuery, state: FSMContext, commands: list[str]):
+async def callback_setup(callback: CallbackQuery, state: FSMContext, commands: list[str]):
     match commands:
         case [_, "host"]:
             await state.set_state(Setup.host)
@@ -266,6 +280,7 @@ def _get_info(inline, port, host):
 
 @rt.inline_query()
 async def inline_info(inline: InlineQuery, state: FSMContext):
+    button = None
     data = await state.get_data() or {}
     if len(inline.query) == 0 and "host" in data and "port" in data:
         host, port = data['host'], data['port']
@@ -277,6 +292,18 @@ async def inline_info(inline: InlineQuery, state: FSMContext):
         host = inline.query
         article = _get_info(inline, port)
     else:
-        return
+        button = InlineQueryResultsButton(text="Set these parameters", start_parameter="settings")
+        article = [
+            InlineQueryResultArticle(
+                id="not_setted",     # status=False, string_status=TURNED_OFF, description=description, version=version, onp=onp, maxp=maxp
+                title="Host or port are not setted",
+                description="You need set these values in this bot.",
+                input_message_content=InputTextMessageContent(
+                    message_text="<i>I didn't set host and port in this bot...</i>",
+                    parse_mode="html"
+                ),
+                reply_markup=make_row_things(["Go to the bot", "Try inline"], [{"url": f"https://t.me/{inline.bot._me.username}"}, {"switch_inline_query_current_chat": ""}])
+            )
+        ]
     
-    await inline.answer(article, cache_time=0, is_personal=True)
+    await inline.answer(article, cache_time=0, is_personal=True, button=button)
