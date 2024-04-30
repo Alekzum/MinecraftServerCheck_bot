@@ -29,7 +29,7 @@ def parse_stats(stats) -> dict:
 
 def _format_message(stats) -> str:
     maxp, onp, version, description, players_list, response_time = parse_stats(stats)
-        # Fix for aternos
+    # Fix for aternos
     if maxp == 0:
         result = "\n".join([TURNED_OFF, f"🪧 Description: {description}", f"🔢 Current version {version}", f"👥 Players count: {onp}/{maxp}", f"⌚ Response time: {response_time:.2f}"])
     else:
@@ -41,7 +41,7 @@ def _format_message(stats) -> str:
 
 def _format_message_dict(stats) -> RESULT_DICT:
     maxp, onp, version, description, players_list, response_time = parse_stats(stats)
-        # Fix for aternos
+    # Fix for aternos
     if maxp == 0:
         result = dict(status=False, string_status=TURNED_OFF, description=description, version=version, onp=onp, maxp=maxp, response_time=response_time)
     
@@ -78,7 +78,7 @@ def dict_to_str(d: RESULT_DICT) -> str:
     return result
 
 
-def get_info(host: str, port=25565, to_dict=False) -> RESULT_DICT:
+async def get_info(host: str, port=25565, to_dict=False) -> RESULT_DICT:
     """Return string for some server in dict"""
 
     client = PINGClient(host, port, format_method=PINGClient.REMOVE)
@@ -86,7 +86,7 @@ def get_info(host: str, port=25565, to_dict=False) -> RESULT_DICT:
         stats = client.get_stats()
     except ConnectionRefusedError:
         result = {"status": False, "string_status": REFUSED} if to_dict else REFUSED
-    except TimeoutError:
+    except:
         result = {"status": False, "string_status": TIMEOUT} if to_dict else TIMEOUT
     else:
         result = _format_message_dict(stats) if to_dict else _format_message(stats)
