@@ -25,7 +25,4 @@ def get_host_port(uid: str) -> tuple[str, int]:
         cur = con.cursor()
         cur.execute("SELECT host, port FROM data WHERE uid = ?", (uid, ))
         result = cur.fetchone()
-    # print(result)
     return result
-
-# print(get_raw())

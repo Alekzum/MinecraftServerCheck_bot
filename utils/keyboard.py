@@ -1,5 +1,5 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, SwitchInlineQueryChosenChat
-from typing import Iterable, Literal
+from typing import Sequence, Literal
 
 
 INPUT_FIELDS = dict[Literal['url', 'callback', 'switch_inline_query', 'switch_inline_query_chosen_chat', 'switch_inline_query_current_chat'], str]
@@ -17,13 +17,13 @@ def make_button(text: str, callback: str) -> InlineKeyboardMarkup:
     result = InlineKeyboardMarkup(inline_keyboard=[[button]])
     return result
 
-def make_row(texts: Iterable[str], callbacks: Iterable[str]) -> InlineKeyboardMarkup:
+def make_row(texts: Sequence[str], callbacks: Sequence[str]) -> InlineKeyboardMarkup:
     """Make a row with buttons"""
     buttons = [InlineKeyboardButton(text=texts[i], callback_data=callbacks[i]) for i in range(len(texts))]
     result = InlineKeyboardMarkup(inline_keyboard=[buttons])
     return result
 
-def make_keyboard(texts: Iterable[Iterable[str]], acts: Iterable[Iterable[INPUT_FIELDS]]) -> InlineKeyboardMarkup:
+def make_keyboard(texts: Sequence[Sequence[str]], acts: Sequence[Sequence[INPUT_FIELDS]]) -> InlineKeyboardMarkup:
     """Make a whole keyboard"""
     result = []
     for index_row, row_texts in enumerate(texts):
@@ -42,7 +42,7 @@ def make_keyboard(texts: Iterable[Iterable[str]], acts: Iterable[Iterable[INPUT_
     keyboard = InlineKeyboardMarkup(inline_keyboard=result)
     return keyboard
 
-def make_row_things(texts: list[str], acts: list[dict[INPUT_FIELDS, str]]):
+def make_row_things(texts: list[str], acts: Sequence[INPUT_FIELDS]):
     result = []
     for it, text in enumerate(texts):
         act_name, act_value = tuple(acts[it].items())[0]

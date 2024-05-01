@@ -1,11 +1,11 @@
 from utils.custom_filters import CallbackCommand
 from utils.database import get_host_port, set_host_port
 from utils.keyboard import make_button, make_row, make_row_things, make_keyboard
-from utils.minecraft import get_info, dict_to_str
+from utils.minecraft import get_info_str
 from utils.states import Setup
 from aiogram import Router, F
 from aiogram.filters import Command, StateFilter
-from aiogram.types import Message, CallbackQuery, InlineQuery, InlineQueryResultArticle, InputTextMessageContent, BotCommand, InlineQueryResultsButton
+from aiogram.types import Message, CallbackQuery, InlineQuery, InlineQueryResultArticle, InputTextMessageContent, ChosenInlineResult, InlineQueryResultsButton
 from aiogram.fsm.context import FSMContext
 from uuid import uuid4
 import asyncio
@@ -15,10 +15,13 @@ import time
 
 logger = logging.getLogger(__name__)
 rt = Router()
+TIMEOUT = 60  # Minutes
 MENU_BUTTON = button = make_button("Menu", "menu")
 IN_MENU_ROW = make_row(["Get server's state", "Settings"], ["server", "settings"])
 SERVER_SUCCESS = make_row(("Menu", "Retry"), ("menu", "server"))
-SETTINGS_ROW = make_row(["Setup host", "Setup port", "Go to the menu"], ["setup host", "setup port", "menu"])
+SettingsRow = lambda data: make_keyboard(
+    [["Setup host", "Setup port"], [("Turn " + ("off" if data.get('safe_mode', True) else "on") + " safe mode"), "Go to the menu"]], 
+    [[{"callback": "setup host"}, {"callback": "setup port"}], [{"callback": "setup safe_mode"}, {"callback": "menu"}]])
 
 
 @rt.callback_query(CallbackCommand("auto_update"))
@@ -29,7 +32,7 @@ async def callback_auto_update(callback: CallbackQuery, state: FSMContext, comma
             await callback.answer("Started auto_update!")
             time_start = time.time()
             time_current = time.time()
-            while time_current - time_start <= 600:
+            while time_current - time_start <= TIMEOUT*60:
                 cb = callback.model_copy(update={'data': f"server {uid} auto_update"})
                 success = await callback_server(cb, state, ['server', uid, 'auto_update'])
                 if not success:
@@ -47,7 +50,7 @@ async def cmd_server(message: Message, state: FSMContext):
     data = await state.get_data() or {}
     if "host" in data and "port" in data:
         host, port = data['host'], data['port']
-        info = await get_info(host, port)
+        info = await get_info_str(host, port)
         await message.answer(info, reply_markup=SERVER_SUCCESS)
 
     elif "host" in data:
@@ -62,8 +65,8 @@ async def cmd_server(message: Message, state: FSMContext):
 
 @rt.callback_query(CallbackCommand("server"))
 async def callback_server(callback: CallbackQuery, state: FSMContext, commands: list[str]):
+    current_time = time.strftime("%Y.%m.%d, %H:%M:%S%zUTC")
     if len(commands) == 3:
-        current_time = time.strftime("%Y.%m.%d, %H:%M:%S%zUTC")
         uid = commands[1]
         if get_host_port(uid) is None:
             await callback.bot.edit_message_reply_markup(inline_message_id=callback.inline_message_id, reply_markup=make_row_things(["Go to the bot", "Try inline"], [{"url": f"https://t.me/{callback.bot._me.username}"}, {"switch_inline_query_current_chat": ""}]))
@@ -71,7 +74,7 @@ async def callback_server(callback: CallbackQuery, state: FSMContext, commands: 
             return False
         
         host, port = get_host_port(uid)
-        info = await get_info(host, port) + f"\n\n{current_time}"
+        info = await get_info_str(host, port)
         KEYBOARD = make_keyboard([["Go to the bot", "Try inline"]], [[{"url": f"https://t.me/{callback.bot._me.username}"}, {"switch_inline_query_current_chat": ""}]])
 
         try: await callback.bot.edit_message_text(inline_message_id=callback.inline_message_id, text=info, reply_markup=KEYBOARD)
@@ -85,8 +88,8 @@ async def callback_server(callback: CallbackQuery, state: FSMContext, commands: 
             await callback.answer()
             return
         host, port = get_host_port(uid)
-        info = await get_info(host, port)
-        KEYBOARD = make_keyboard([["Enable autocheck (only for 10 minutes)","Retry"],["Go to the bot", "Try inline"]], [[{"callback": f"auto_update {uid}"},{"callback": f"server {uid}"}],[{"url": f"https://t.me/{callback.bot._me.username}"}, {"switch_inline_query_current_chat": ""}]])
+        info = await get_info_str(host, port)
+        KEYBOARD = make_keyboard([[f"Enable autocheck ({TIMEOUT} minutes)","Retry"],["Go to the bot", "Try inline"]], [[{"callback": f"auto_update {uid}"},{"callback": f"server {uid}"}],[{"url": f"https://t.me/{callback.bot._me.username}"}, {"switch_inline_query_current_chat": ""}]])
 
         try: await callback.bot.edit_message_text(inline_message_id=callback.inline_message_id, text=info, reply_markup=KEYBOARD)
         except: pass
@@ -95,7 +98,7 @@ async def callback_server(callback: CallbackQuery, state: FSMContext, commands: 
         data = await state.get_data() or {}
         if "host" in data and "port" in data:
             host, port = data['host'], data['port']
-            info = await get_info(host, port)
+            info = await get_info_str(host, port)
 
             try: await callback.message.edit_text(info, reply_markup=SERVER_SUCCESS)
             except: pass
@@ -116,18 +119,21 @@ async def callback_server(callback: CallbackQuery, state: FSMContext, commands: 
     return
 
 
+safe_mode_string = {True: "✅", False: "🚫"}
+def format_settings(data): return "\n• Host: {}\n• Port: {}\n• Safe mode: {}".format(data.get('host'), data.get('port'), safe_mode_string[bool(data.get('safe_mode', True))])
+
 @rt.message(Command("settings"))
 async def cmd_settings(message: Message, state: FSMContext):
     data = await state.get_data() or {}
-    string_data = "\n• Host: {}\n• Port: {}".format(data.get('host'), data.get('port'))
-    await message.answer(f"Current settigns are: {string_data}", reply_markup=SETTINGS_ROW)
+    string_data = format_settings(data)
+    await message.answer(f"Current settings are: {string_data}", reply_markup=SettingsRow(data))
     
 
 @rt.callback_query(CallbackCommand("settings"))
 async def callback_settings(callback: CallbackQuery, state: FSMContext, commands: list[str]):
     data = await state.get_data() or {}
-    string_data = "\n• Host: {}\n• Port: {}".format(data.get('host'), data.get('port'))
-    try: await callback.message.edit_text(f"Current settigns are: {string_data}", reply_markup=SETTINGS_ROW)
+    string_data = format_settings(data)
+    try: await callback.message.edit_text(f"Current settings are: {string_data}", reply_markup=SettingsRow(data))
     except: pass
     await callback.answer()
 
@@ -136,8 +142,8 @@ async def callback_settings(callback: CallbackQuery, state: FSMContext, commands
 async def cmd_setup(message: Message, state: FSMContext):
     match message.text.split():
         case [_, "host", host]:
-            await state.update_data({"host": message.text})
-            await message.answer(f"Host is setted to {message.text}", reply_markup=MENU_BUTTON)
+            await state.update_data({"host": host})
+            await message.answer(f"Host is setted to {host}", reply_markup=MENU_BUTTON)
             await state.set_state()
 
         case [_, "port", port]:
@@ -160,9 +166,10 @@ async def cmd_setup(message: Message, state: FSMContext):
         case [_, "port"]:
             await state.set_state(Setup.port)
             await message.answer("Write port… Or input \".\" for default value (25565)")
-
+        
         case [_]:
             await message.answer("/setup port [port] or /setup host [host]", reply_markup=MENU_BUTTON)
+        
         case _:
             await message.answer("what?", reply_markup=MENU_BUTTON)
 
@@ -180,6 +187,14 @@ async def callback_setup(callback: CallbackQuery, state: FSMContext, commands: l
             try: await callback.message.edit_text("Write port… Or input \".\" for default value (25565)")
             except: pass
 
+        case [_, "safe_mode"]:
+            await state.update_data(safe_mode=(not(await state.get_data()).get("safe_mode", True)))
+            data = await state.get_data() or {}
+            string_data = format_settings(data)
+            try: await callback.message.edit_text(f"Current settings are: {string_data}", reply_markup=SettingsRow(data))
+            except: pass
+            await callback.answer()
+        
         case _:
             try: await callback.message.edit_text("what?", reply_markup=MENU_BUTTON)
             except: pass
@@ -210,60 +225,79 @@ async def set_port(message: Message, state: FSMContext):
         await message.answer("Input a correct port or just \".\"")
 
 
-async def _get_info(*, inline=None, host="", port=25565):
+async def _get_info(*, inline=None, host="", port: str|int=25565, safe_mode=True):
     if inline is None or host == "":
         return
-    info = await get_info(host, port, to_dict=True)
-    string_info = dict_to_str(info)
-    uid = str(uuid4())
-    KEYBOARD = make_keyboard([["Enable autocheck (only for 5 minutes)","Retry"],["Go to the bot", "Try inline"]], [[{"callback": f"auto_update {uid}"},{"callback": f"server {uid}"}],[{"url": f"https://t.me/{inline.bot._me.username}"}, {"switch_inline_query_current_chat": ""}]])
-    if info.get('status'):
-        article_safe = InlineQueryResultArticle(
-            id=uid,
-            title=info.get('description'),
-            description=string_info,
-            input_message_content=InputTextMessageContent(
-                message_text=string_info                
-            ),
-            reply_markup=KEYBOARD
-        )
-    else:
-        article_safe = InlineQueryResultArticle(
-            id=str(uuid4()),     # status=False, string_status=TURNED_OFF, description=description, version=version, onp=onp, maxp=maxp
-            title=info.get('string_status').splitlines()[0],
-            description="\n".join(info.get('string_status').splitlines()[1:]),
-            input_message_content=InputTextMessageContent(
-                message_text=info.get('string_status')
-            ),
-            reply_markup=KEYBOARD
-        )
-    set_host_port(uid, host, port)
+    if isinstance(port, str): port=int(port)
+    # info = await get_info_dict(host, port)
+    # string_info = dict_to_str(info)
+    info = await get_info_str(host, port)
+    uid = str(uuid4())[:12]
+    KEYBOARD = make_keyboard([[f"Enable autocheck ({TIMEOUT} minutes)","Retry"],["Go to the bot", "Try inline"]], [[{"callback": f"auto_update {uid}"},{"callback": f"server {uid}"}],[{"url": f"https://t.me/{inline.bot._me.username}"}, {"switch_inline_query_current_chat": ""}]])
+    
+    string_status = info.splitlines()[0]
 
-        # Idea for setting "SAFE MODE" which default will be ON
-        # article_unsafe = InlineQueryResultArticle(
-        #     id = str(uuid4()),
-        #     title = "[UNSAFE] Server offline…",
-        #     description = "This article will show server's IP and PORT. Be careful with it!",
-        #     input_message_content=InputTextMessageContent(
-        #         message_text="I try check server, but it is offline…"
-        #     )
-        # )
-    return [article_safe]
+    title_safe = ("[SAFE] " + string_status) if not safe_mode else string_status
+    title_unsafe = "[UNSAFE] " + string_status
+    
+    desc_safe = ("This atricle isn't showing server's IP and port" + "\n" + "\n".join(info.splitlines()[1:])) if not safe_mode else "\n".join(info.splitlines()[1:])
+    desc_unsafe = "This atricle is showing server's IP and port" + "\n" + "\n".join(info.splitlines()[1:])
+
+    msg_safe = info
+    msg_unsafe = msg_safe + "\n" + f"• Server: {host}:{port}"
+
+    article_safe = InlineQueryResultArticle(
+        id="_".join([uid, host.replace(".", "--"), str(port), "s"]),
+        title=title_safe,
+        description=desc_safe,
+        input_message_content=InputTextMessageContent(
+            message_text=msg_safe
+        ),
+        reply_markup=KEYBOARD
+    )
+
+    result = [article_safe]
+
+    if not safe_mode:
+        article_unsafe = InlineQueryResultArticle(
+            id="_".join([uid, host.replace(".", "--"), str(port), "us"]),
+            title=title_unsafe,
+            description=desc_unsafe,
+            input_message_content=InputTextMessageContent(
+                message_text=msg_unsafe
+            ),
+            reply_markup=KEYBOARD
+        )
+        result.append(article_unsafe)
+
+
+    return result
+
+
+@rt.chosen_inline_result()
+async def cir_info(cir: ChosenInlineResult, state: FSMContext):
+    uid, host, port, safe_str = cir.result_id.split("_")
+    host = host.replace("--", ".")
+    set_host_port(uid, host, int(port))
 
 
 @rt.inline_query()
 async def inline_info(inline: InlineQuery, state: FSMContext):
     button = None
     data = await state.get_data() or {}
+    safe_mode = data.get('safe_mode', True)
     if len(inline.query) == 0 and "host" in data and "port" in data:
         host, port = data['host'], data['port']
-        article = await _get_info(inline=inline, port=port, host=host)
+        article = await _get_info(inline=inline, port=port, host=host, safe_mode=safe_mode)
+
     elif len(inline.query) != 0 and inline.query.count(":") == 1 and inline.query.split(":")[1].isdecimal():
         host, port = inline.query.split(":")
-        article = await _get_info(inline=inline, port=port, host=host)
+        article = await _get_info(inline=inline, port=port, host=host, safe_mode=safe_mode)
+
     elif len(inline.query) != 0 and inline.query.count(":") == 0:
         host = inline.query
-        article = await _get_info(inline=inline, host=host)
+        article = await _get_info(inline=inline, host=host, safe_mode=safe_mode)
+
     else:
         button = InlineQueryResultsButton(text="Set these parameters", start_parameter="settings")
         article = [
