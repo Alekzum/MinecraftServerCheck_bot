@@ -232,7 +232,7 @@ async def _get_info(*, inline=None, host="", port: str|int=25565, safe_mode=True
     # info = await get_info_dict(host, port)
     # string_info = dict_to_str(info)
     info = await get_info_str(host, port)
-    uid = str(uuid4())[:12]
+    uid = str(uuid4()).replace("-", "")[:16]
     KEYBOARD = make_keyboard([[f"Enable autocheck ({TIMEOUT} minutes)","Retry"],["Go to the bot", "Try inline"]], [[{"callback": f"auto_update {uid}"},{"callback": f"server {uid}"}],[{"url": f"https://t.me/{inline.bot._me.username}"}, {"switch_inline_query_current_chat": ""}]])
     
     string_status = info.splitlines()[0]
@@ -276,9 +276,10 @@ async def _get_info(*, inline=None, host="", port: str|int=25565, safe_mode=True
 
 @rt.chosen_inline_result()
 async def cir_info(cir: ChosenInlineResult, state: FSMContext):
-    uid, host, port, safe_str = cir.result_id.split("_")
-    host = host.replace("--", ".")
-    set_host_port(uid, host, int(port))
+    if cir.result_id.count("_") == 3:
+        uid, host, port, safe_str = cir.result_id.split("_")
+        host = host.replace("--", ".")
+        set_host_port(uid, host, int(port))
 
 
 @rt.inline_query()
