@@ -98,12 +98,16 @@ def dict_to_str(d: ResultDict) -> str:
     return result + f"\n• {current_time}"
 
 
+def get_stats(host, port):
+    client = PINGClient(host, port, format_method=PINGClient.REMOVE, timeout=10)
+    stats = client.get_stats()
+    return stats
+
 async def get_info_dict(host: str, port=25565) -> ResultDict | str:
     """Return string for some server in dict (or string)"""
 
-    client = PINGClient(host, port, format_method=PINGClient.REMOVE)
     try:
-        stats = client.get_stats()
+        stats = get_stats()
     except ConnectionRefusedError:
         result = ResultDict(status=False, string_status=REFUSED, description=None, version=None, maxp=None, onp=None, players=None, response_time=None)
     except:
@@ -117,9 +121,8 @@ async def get_info_dict(host: str, port=25565) -> ResultDict | str:
 async def get_info_str(host: str, port=25565) -> tuple[bool, str]:
     """Return info for some server and boolean status"""
 
-    client = PINGClient(host, port, format_method=PINGClient.REMOVE)
     try:
-        stats = client.get_stats()
+        stats = get_stats()
     except ConnectionRefusedError:
         result = REFUSED
     except:
