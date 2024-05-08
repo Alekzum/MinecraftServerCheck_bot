@@ -13,7 +13,7 @@ if path == "":
     token = input("Write bot's token (https://botfather.t.me): ")
     dotenv.set_key(".env", "TOKEN", token)
 
-TOKEN = dotenv.get_key(".env", "TOKEN")
+TOKEN: str = dotenv.get_key(".env", "TOKEN")
 
 dir_exists = os.path.isdir('data')
 
