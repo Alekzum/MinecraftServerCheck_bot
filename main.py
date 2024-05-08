@@ -11,7 +11,8 @@ bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode="html"))
 dp = Dispatcher(storage=SQLStorage())
 include_routers(dp)
 
-dp.message.middleware(CooldownMiddleware())
-dp.callback_query.middleware(CooldownMiddleware())
+
+dp.message.middleware(CooldownMiddleware(1))
+dp.callback_query.middleware(CooldownMiddleware(10))
 
 asyncio.run(dp.start_polling(bot))
