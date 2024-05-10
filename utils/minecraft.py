@@ -1,5 +1,5 @@
 from utils.types import MinecraftResultDict
-from typing import Literal, Union
+from typing import Literal, Union, Callable
 from mctools import PINGClient
 import traceback
 import logging
@@ -11,6 +11,8 @@ TURNED_OFF = "🔴 Server is offline"
 TURNED_ON = "🟢 Server is online"
 REFUSED = TURNED_OFF + "\nConnection is refused…"
 TIMEOUT = TURNED_OFF + "\nConnection is timedout…"
+UNEXCEPTED = TURNED_OFF + "\nUnknown server's status..."
+UNEXCEPTED_LAMBDA: Callable[[Exception]] = lambda ex: TURNED_OFF + "\nUnknown server's status...\nDetailed error: " + repr(ex)
 RESULT_DICT = dict[Literal['status', 'string_status', 'description', 'version', 'maxp', 'onp', 'response_time', 'players'], Union[bool, str, str, str, int, int, float, list[str]]]  # Players are optional
 
 
@@ -115,8 +117,10 @@ async def get_info_str(host: str, port=25565) -> str:
         stats = get_stats(host, port)
     except ConnectionRefusedError:
         result = REFUSED
-    except Exception as ex:
+    except TimeoutError as ex:
         result = TIMEOUT
+    except Exception as ex:
+        result = UNEXCEPTED_LAMBDA(ex)
         logger.warning(f"{host}:{port}. {ex!r}")
     else:
         result = _format_message(stats)
