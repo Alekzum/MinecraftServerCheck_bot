@@ -56,3 +56,5 @@ def make_row_things(texts: list[str], acts: Sequence[INPUT_FIELDS]):
         result.append(button)
     keyboard = InlineKeyboardMarkup(inline_keyboard=[result])
     return keyboard
+
+EMPTY_BUTTON = make_button("Тут ничего нет", "ты думал тут что-то будет???")
