@@ -1,7 +1,6 @@
 from socket import gaierror
 from utils.my_types import MinecraftResultDict
 from typing import Literal, Union, Callable
-# from mctools import PINGClient, QUERYClient, RCONClient
 import traceback
 import asyncio
 import logging
@@ -24,10 +23,9 @@ RESULT_DICT = dict[Literal['status', 'string_status', 'description', 'version', 
 client = httpx.AsyncClient(base_url="https://api.mcsrvstat.us/3/")
 
 async def get_stats(host, port):
-    # client = PINGClient(host, port, timeout=5, format_method=PINGClient.REMOVE)
     start_time = time.time()
 
-    stats = (await client.get(host)).json()
+    stats = (await client.get(host+":"+port)).json()
 
     end_time = time.time()
     response_time = end_time - start_time
