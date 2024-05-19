@@ -26,3 +26,4 @@ class MainInfo():
 class MainGetInfo():
     safe: MainInfo
     unsafe: MainInfo
+    status: bool
