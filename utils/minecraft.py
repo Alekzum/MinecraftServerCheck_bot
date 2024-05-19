@@ -2,7 +2,6 @@ from socket import gaierror
 from utils.my_types import MinecraftResultDict
 from typing import Literal, Union, Callable
 import traceback
-import asyncio
 import logging
 import httpx
 import time
