@@ -1,5 +1,5 @@
 # Description
-This bot can view stats from minecraft server (thx mctools)
+This bot can view stats from minecraft server (thx httpx and api.mcsrvstat.us)
 
 # Setup
 - Use `pip install -r requirements.txt`
