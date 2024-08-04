@@ -1,4 +1,4 @@
 aiogram
-mctools==1.3.0
+httpx
 python-dotenv
 aiogram-sqlite-storage
