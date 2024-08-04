@@ -1,13 +1,9 @@
-import logging
 import dotenv
 import json
 import os
 
 
 DATABASE_PATH = "data/database.json"
-FORMAT = '%(asctime)s - %(levelname)s (%(name)s) - %(message)s'
-logging.basicConfig(format=FORMAT, level=logging.INFO)
-logging.getLogger("httpx").setLevel(logging.WARNING)
 
 path = dotenv.find_dotenv()
 if path == "":
