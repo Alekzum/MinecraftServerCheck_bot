@@ -304,7 +304,7 @@ async def cir_info(cir: ChosenInlineResult, state: FSMContext):
             set_host_port(uid, host, int(port))
 
             im_id = cir.inline_message_id
-            await cir.bot.edit_message_text(f"Checking server…" if in_safe_mode else f"Checking server {host}:{port}…", inline_message_id=im_id)
+            await cir.bot.edit_message_text(f"Checking server…" if in_safe_mode else f"Checking server {host}…", inline_message_id=im_id)
             
             time_start = time.time()
             info = await _get_info(cir, host, port, uid)

@@ -1,6 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup
 from typing import TypedDict
 from dataclasses import dataclass
+from io import BytesIO
 
 
 class MinecraftResultDict(TypedDict):
@@ -12,6 +13,7 @@ class MinecraftResultDict(TypedDict):
     onp: int | None
     response_time: float | None
     players: list[str] | None
+    image: BytesIO | None
 
 
 @dataclass
